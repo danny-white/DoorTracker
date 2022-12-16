@@ -1,0 +1,5 @@
+1. poller that listens to the MQTT, done. Dumps messages into a queue which we can read from at will.
+2. process the incoming data, the program should then read in items, add needed timestamps etc and then ...
+3. write to redis, simple enough
+4. monitoring, nice
+5. data vis, later, also nice 
