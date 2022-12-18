@@ -1,4 +1,6 @@
+import org.eclipse.paho.client.mqttv3.IMqttAsyncClient;
 import org.eclipse.paho.client.mqttv3.IMqttClient;
+import org.eclipse.paho.client.mqttv3.IMqttMessageListener;
 import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
@@ -8,37 +10,45 @@ import java.util.Queue;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
+import java.util.function.BiFunction;
 
+/**
+ * Pass in a buffer and the thread pool, then you have control over everything.
+ * The calling class then owns threading + data storage and you can swap Facade's easily
+ */
 public class MQTTFacade {
     private static final String publisherId = UUID.randomUUID().toString();
     private final IMqttClient client;
-    private final ExecutorService threadpool;
+    private final IMqttMessageListener listener;
 
-    private Queue<String> dataBuffer;
+    private static final String topic = "topic/state";
+    private static final String server = "tcp://localhost:1883";
 
-    public MQTTFacade(ExecutorService threadpool) throws MqttException {
-        client = new MqttClient("tcp://localhost:1883",publisherId);
+    private final MqttConnectOptions options;
 
-        dataBuffer = new ConcurrentLinkedQueue<>();
-        this.threadpool = threadpool;
 
-        MqttConnectOptions options = new MqttConnectOptions();
+    public MQTTFacade(IMqttMessageListener listener) throws MqttException {
+        client = new MqttClient(server, publisherId);
+
+        this.listener  = listener;
+
+        options = new MqttConnectOptions();
         options.setAutomaticReconnect(true);
         options.setCleanSession(true);
         options.setConnectionTimeout(10);
+
         client.connect(options);
     }
 
     public void subscribe() throws MqttException {
-        client.subscribe("topic/state", (topic, msg) -> {
-            threadpool.submit(() -> {
-                byte[] payload = msg.getPayload();
-                dataBuffer.add(new String(payload, StandardCharsets.UTF_8));
-            });
-        });
+        client.subscribe(topic, listener);
     }
 
-    public String read() {
-        return dataBuffer.poll();
+    public void close() {
+        try {
+            client.close();
+        } catch (MqttException e) {
+            throw new RuntimeException("Unable to Close", e);
+        }
     }
 }
