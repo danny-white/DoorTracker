@@ -1,25 +1,32 @@
-import java.text.SimpleDateFormat;
+import com.google.inject.Inject;
+
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.SimpleTimeZone;
 
-/**
- * DI
- */
 public class OutputProcessor {
-    private final RedisFacade output = new RedisFacade();;
-    private final DoorSerializer serde = new DoorSerializer();
+    private final RedisFacade output;
+    private final DoorSerializer serde;
     private static final String username = "Danewhi";
     private static final DateTimeFormatter timeFormat = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
 
-    public OutputProcessor() {
+    @Inject
+    public OutputProcessor(RedisFacade output, DoorSerializer serde) {
+        this.output = output;
+        this.serde = serde;
     }
 
     /**
      * Annotate + write to storage
      */
     public void process(String item) {
-        DoorData data = new DoorData(item, LocalDateTime.now());
+        process(item, LocalDateTime.now());
+    }
+
+    /**
+     * Annotate + write to storage
+     */
+    public void process(String item, LocalDateTime timestamp) {
+        DoorData data = new DoorData(item, timestamp);
         String serdeData = serde.serialize(data);
         output.set(username +  ":" + data.getTimestamp().format(timeFormat), serdeData);
     }

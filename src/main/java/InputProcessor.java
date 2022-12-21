@@ -1,44 +1,31 @@
 import com.google.inject.Inject;
-import org.eclipse.paho.client.mqttv3.IMqttMessageListener;
 import org.eclipse.paho.client.mqttv3.MqttException;
 
-import java.nio.charset.StandardCharsets;
 import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  * Interfaces with IOT facade and is responsible for Memory management of the inbound stream
  * DI
  */
 public class InputProcessor {
-    MQTTFacade iotInput;
-
-    private Queue<String> dataBuffer;
-
-    private final IMqttMessageListener listener = (__, msg) -> {
-        byte[] payload = msg.getPayload();
-        dataBuffer.add(new String(payload, StandardCharsets.UTF_8));
-    };
+    private final MQTTFacade iotInput;
+    private final Queue<String> dataBuffer;
 
     /**
      * Blocking Method
      */
     @Inject
-    public InputProcessor(Queue<String> dataBuffer) {
+    public InputProcessor(Queue<String> dataBuffer, MQTTFacade iotInput) {
         this.dataBuffer = dataBuffer;
-        System.out.println("val: " + dataBuffer);
-        System.out.println("class: " + dataBuffer.getClass());
-
-        dataBuffer = new ConcurrentLinkedQueue<>();
-
+        this.iotInput = iotInput;
         try {
-            iotInput = new MQTTFacade(listener);
             iotInput.subscribe();
         } catch (MqttException e) {
             throw new RuntimeException("Failed to instantiate IOT Connection", e);
         }
     }
 
+    //Todo, update this to read as many items as possible in tk msec.
     public String read(int timeoutMillis) {
         long starttime = System.currentTimeMillis();
         while (System.currentTimeMillis() < starttime + timeoutMillis) {
@@ -53,5 +40,4 @@ public class InputProcessor {
         }
         return null;
     }
-
 }

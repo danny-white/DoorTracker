@@ -1,13 +1,13 @@
+import com.google.inject.Inject;
 import redis.clients.jedis.Jedis;
 
 public class RedisFacade {
     //https://redis.io/docs/data-types/tutorial/
     private final Jedis jedis;
-    private static final String address = "127.0.0.1";
-    private static final int port = 6379;
 
-    public RedisFacade() {
-        jedis = new Jedis(address, port);
+    @Inject
+    public RedisFacade(Jedis jedis) {
+        this.jedis = jedis;
     }
 
     public String get(String key) {
